@@ -1,0 +1,10 @@
+data/*
+preprocessedData/*
+doc/dlbook_cn_public.pdf
+*.csv
+*.wav 
+*.data-00000-of-00001
+*.ckpt.data-00000-of-00001
+*.meta
+*.index
+*.png
