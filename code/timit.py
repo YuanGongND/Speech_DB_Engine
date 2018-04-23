@@ -20,8 +20,8 @@ class Sonant():
         self.dlct = dialect
 
 class Timit():
-    """ SpeechDB class loads different speech databases into memory 
-        and has multiple class methods that operate on the different data.
+    """ Timit class loads the Timit database into memory 
+        and has multiple class methods that operate on the data.
     
     :param example: type, description.
     :param dbPath: str, path to TIMIT database.
@@ -39,6 +39,7 @@ class Timit():
         sys.stdout.write('loading...')       
         trainPath = dbPath + '/TRAIN'
         testPath = dbPath + '/TEST'
+        #TODO: test-core
         
         for path in [trainPath, testPath]:
             for subdir, dirs, files in os.walk(path):
