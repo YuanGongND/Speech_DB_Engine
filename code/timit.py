@@ -36,16 +36,18 @@ class Timit():
         self.timit = self.load_db(dbPath) 
 
     def load_db(self,dbPath):
-        sys.stdout.write('loading...')       
         trainPath = dbPath + '/TRAIN'
         testPath = dbPath + '/TEST'
+        sys.stdout.write('loading')       
         #TODO: test-core
-        
+        test_count = 0 
         for path in [trainPath, testPath]:
             for subdir, dirs, files in os.walk(path):
+                # Loading visual 
                 sys.stdout.write('.')
                 sys.stdout.flush()
-                # reinstantiated here so 2 don't match across speakers
+               
+                # Add Sonants to sonant_dataset 
                 file_matcher = {}
                 for file in files:
                     if file.lower().endswith(('.phn','.wav')):
@@ -71,6 +73,7 @@ class Timit():
                                 if phn_str not in self.phnList:
                                    self.phnList.append(phn_str) 
                                 wav = pair[1]
+                                test_count = test_count + 1
                                 if phn_str not in self.sonant_dataset:
                                     self.sonant_dataset[phn_str] = [Sonant(phn_str, wav, spkr,dlct)]
                                 else: 
@@ -78,6 +81,8 @@ class Timit():
                         else:
                             # add it to purgatory
                             file_matcher[basename] = 1
+        print('')  
+        print('test count: ' + str(test_count))
 
     def sonant_tuples(self, phn_file, wav_file, path):
         ''' returns a list of sonant text/waveform pairs based on the input files
@@ -100,27 +105,44 @@ class Timit():
             phn_list = line.split()
             pairs.append((phn_list[2], data[int(phn_list[0]):int(phn_list[1])]))
 
-        # doulbe check that pairs is on stack and gets recreated on call
+        # double check that pairs is on stack and gets recreated on call
         return pairs
 
     def read_db(self, yType, yVals):
-        y = np.zeros(1, int)
-        x = np.zeros((1,self.xLen),int)
+        #TODO: start by initializing big matrix and indexing into it
+        y = np.zeros(15000, int)
+        print('type of y: ' + str(type(y)))
+        #y = np.zeros(1, int)
+        #x = np.zeros((1,self.xLen),int)
+        x = np.zeros((15000,self.xLen),int)
+        print('y: ' + str(y)) 
+
         first = True
         # returns ['sh',..] or ['DR1',...] or ['FCAO1',...]
         yValList = self.ytype_val_list(yType)
+
         # converting yVals array to corresponding numbers
-        yNumVals = [ yValList.index(y) for y in yVals] 
+        yNumVals = [ yValList.index(i) for i in yVals] 
         print('yNumVals: ' + str(yNumVals))
-        count = 1
+        count = 0
+
         # TODO: might need to get parallel
-        for sonant in self.sonant_dataset[yValList[0]]:
-            print('percent done: ' + str((count/12598)*100))
-            count = count + 1 
+        # this is only taking the sonants that have the yVal of 'sh' so the
+        # conditional below is redundant - TODO: try getting rid of the second
+        # or removing map of {phn: Sonant}
+        for sonant in self.sonant_dataset[yValList[1]]:
+            #print('percent done: ' + str((count/3032)*100))
             # returns 'sh' or 'DR1' or 'FCAO1'
             sonantYVal = self.ytype_value(yType,sonant)
-            if sonantYVal in yValList:
-                if first:
+            print('sonantYVal: ' + str(sonantYVal) + ' ,type: ' + str(type(sonantYVal)))
+            print('y: ' + str(y))
+            if yValList.index(sonantYVal) in yNumVals:
+                print('sonantyValList: ' + str(yValList))
+                print('sonantYVal: ' + str(sonantYVal))
+                print('y: ' + str(type(y)))
+                y[count] = yValList.index(sonantYVal)
+                x[count] = self.cut_pad(sonant.wav) 
+                '''if first:
                     y[0] = yValList.index(sonantYVal)
                     x[0] = self.cut_pad(sonant.wav)
                     first = False
@@ -130,6 +152,8 @@ class Timit():
                     print(str(len(sonant.wav)))
                     print(str(len(self.cut_pad(sonant.wav))))
                     x = np.append(x,[self.cut_pad(sonant.wav)],axis=0)
+                '''
+            count = count + 1
 
         return y,x
 
@@ -160,8 +184,9 @@ class Timit():
 
 if __name__ == '__main__':
     timit = Timit('/Users/roycebranning/Desktop/Spring18_School/Speech_Research/TIMIT')
-    print(timit.sonant_dataset)
-    print(len(timit.sonant_dataset['h#']))
+    #print(timit.sonant_dataset)
+    print('len of sonant_dataset[sh]: ' + str(len(timit.sonant_dataset['sh'])))
+    #print('total len (should be same and count number: ' + str(len))
     y,x = timit.read_db('PHN',['sh'])
     print('x:' + str(x))
     print('y:' + str(y))
