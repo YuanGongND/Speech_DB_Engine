@@ -8,7 +8,7 @@ Created Thur Apr 5 18:06:19 2018
 import os
 import numpy as np
 import scipy.io.wavfile
-from subprocess import call
+from subprocess import call, DEVNULL
 import sys
 
 class Sonant():
@@ -40,7 +40,8 @@ class Timit():
         testPath = dbPath + '/TEST'
         sys.stdout.write('loading')       
         #TODO: test-core
-        test_count = 0 
+        test_count = 0
+        exceptions = list() 
         for path in [trainPath, testPath]:
             for subdir, dirs, files in os.walk(path):
                 # Loading visual 
@@ -64,7 +65,9 @@ class Timit():
                     
                             # parse wav and phn files
                             basepath = os.path.join(subdir,basename)
-                            sonantPairs = self.sonant_tuples(basepath+'.phn',basepath+'.wav',subdir)
+                            sonantPairs, err = self.sonant_tuples(basepath+'.phn',basepath+'.wav',subdir)
+                            if len(err) != 0:
+                                exceptions.append(err)
                             if len(sonantPairs) == 0:
                                 # there was an exception in sonant_tuples
                                 pass
@@ -81,8 +84,12 @@ class Timit():
                         else:
                             # add it to purgatory
                             file_matcher[basename] = 1
-        print('')  
-        print('test count: ' + str(test_count))
+        if len(exceptions) > 0:
+            print('')
+            print('error parsing file(s):')
+            for ex in exceptions:
+                print(ex)
+        print('')
 
     def sonant_tuples(self, phn_file, wav_file, path):
         ''' returns a list of sonant text/waveform pairs based on the input files
@@ -92,13 +99,16 @@ class Timit():
         # TODO: other alternative:
         # import soundfile as sf
         # data, samplerate = sf.read('existing_file.wav')
+        exception = ''
         try:
-            call(['sph2pipe', '-f', 'wav', wav_file, path+'/temp.WAV'])
+            #call(['sph2pipe', '-f', 'wav', wav_file, path+'/temp.WAV'])
+            call(['sph2pipe', '-f', 'wav', wav_file, path+'/temp.WAV'], stdout=DEVNULL,stderr=DEVNULL)
+
             rate, data = scipy.io.wavfile.read(path + '/temp.WAV')
             call(['rm', path + '/temp.WAV'])
         except:
-            print('error parsing: ' + wav_file)
-            return ''
+            exception = wav_file
+            return '',exception
         pairs = []
         # parse the .PHN file
         for line in open(phn_file):
@@ -106,16 +116,14 @@ class Timit():
             pairs.append((phn_list[2], data[int(phn_list[0]):int(phn_list[1])]))
 
         # double check that pairs is on stack and gets recreated on call
-        return pairs
+        return pairs,exception
 
     def read_db(self, yType, yVals):
         #TODO: start by initializing big matrix and indexing into it
         y = np.zeros(15000, int)
-        print('type of y: ' + str(type(y)))
         #y = np.zeros(1, int)
         #x = np.zeros((1,self.xLen),int)
         x = np.zeros((15000,self.xLen),int)
-        print('y: ' + str(y)) 
 
         first = True
         # returns ['sh',..] or ['DR1',...] or ['FCAO1',...]
@@ -123,7 +131,6 @@ class Timit():
 
         # converting yVals array to corresponding numbers
         yNumVals = [ yValList.index(i) for i in yVals] 
-        print('yNumVals: ' + str(yNumVals))
         count = 0
 
         # TODO: might need to get parallel
@@ -134,12 +141,7 @@ class Timit():
             #print('percent done: ' + str((count/3032)*100))
             # returns 'sh' or 'DR1' or 'FCAO1'
             sonantYVal = self.ytype_value(yType,sonant)
-            print('sonantYVal: ' + str(sonantYVal) + ' ,type: ' + str(type(sonantYVal)))
-            print('y: ' + str(y))
             if yValList.index(sonantYVal) in yNumVals:
-                print('sonantyValList: ' + str(yValList))
-                print('sonantYVal: ' + str(sonantYVal))
-                print('y: ' + str(type(y)))
                 y[count] = yValList.index(sonantYVal)
                 x[count] = self.cut_pad(sonant.wav) 
                 '''if first:
@@ -185,9 +187,8 @@ class Timit():
 if __name__ == '__main__':
     timit = Timit('/Users/roycebranning/Desktop/Spring18_School/Speech_Research/TIMIT')
     #print(timit.sonant_dataset)
-    print('len of sonant_dataset[sh]: ' + str(len(timit.sonant_dataset['sh'])))
     #print('total len (should be same and count number: ' + str(len))
-    y,x = timit.read_db('PHN',['sh'])
+    y,x = timit.read_db('PHN',['sh','h#'])
     print('x:' + str(x))
     print('y:' + str(y))
     
