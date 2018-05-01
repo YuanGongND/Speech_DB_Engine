@@ -146,7 +146,7 @@ class Timit():
 
         for sonant in self.sonant_dataset:
            
-            # loading graphic 
+            # TODO: loading graphic 
             #print('percent done: ' + str((count/3032)*100))
 
             # checks if value is desired given parameters 
@@ -156,7 +156,7 @@ class Timit():
                 x[count] = self.cut_pad(sonant.wav) 
                 count = count + 1
 
-        #TODO: cut off the extra part (first one that is all 0s)
+        # cut off the extra part 
         y = y[0:count]
         x = x[0:count]
         
