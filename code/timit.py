@@ -78,11 +78,6 @@ class Timit():
                                 wav = pair[1]
                                 test_count = test_count + 1
                                 self.sonant_dataset.append(Sonant(phn_str,wav,spkr,dlct))
-                                '''if phn_str not in self.sonant_dataset:
-                                    self.sonant_dataset[phn_str] = [Sonant(phn_str, wav, spkr,dlct)]
-                                else: 
-                                    self.sonant_dataset[phn_str].append(Sonant(phn_str, wav, spkr,dlct))
-                                '''
                         else:
                             # add it to purgatory
                             file_matcher[basename] = 1
@@ -120,6 +115,14 @@ class Timit():
         return pairs,exception
 
     def read_db(self, yType, yVals=[]):
+
+        # TODO: allow for segmentation with regard to database types:
+        # - test, train, etc.
+
+        # TODO: write documentation about format of read_db method:
+        # read_db('phn') <-- no 2nd parameter implies All
+        # read_db('phn',['sh']) <-- otherwise spec options in list of str
+
 
         # initializing np arrays as zeros bc insertion is faster than appending
         y = np.zeros(1000000, int)
