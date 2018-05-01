@@ -122,8 +122,8 @@ class Timit():
     def read_db(self, yType, yVals):
 
         # initializing np arrays as zeros bc insertion is faster than appending
-        y = np.zeros(15000, int)
-        x = np.zeros((15000,self.xLen),int)
+        y = np.zeros(150000, int)
+        x = np.zeros((150000,self.xLen),int)
 
         # returns ['sh',..] or ['DR1',...] or ['FCAO1',...] depending on input
         # this should also check that the second parameter is matched right?
