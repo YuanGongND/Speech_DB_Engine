@@ -28,7 +28,7 @@ class Timit():
     """
 
     def __init__(self, dbPath, xLen = 10000):
-        self.sonant_dataset = {}
+        self.sonant_dataset = []
         self.xLen = xLen
         self.phnList = []
         self.dlctList = []
@@ -39,7 +39,7 @@ class Timit():
         trainPath = dbPath + '/TRAIN'
         testPath = dbPath + '/TEST'
         sys.stdout.write('loading')       
-        #TODO: test-core
+        #TODO: test-core dataset
         test_count = 0
         exceptions = list() 
         for path in [trainPath, testPath]:
@@ -77,10 +77,12 @@ class Timit():
                                    self.phnList.append(phn_str) 
                                 wav = pair[1]
                                 test_count = test_count + 1
-                                if phn_str not in self.sonant_dataset:
+                                self.sonant_dataset.append(Sonant(phn_str,wav,spkr,dlct))
+                                '''if phn_str not in self.sonant_dataset:
                                     self.sonant_dataset[phn_str] = [Sonant(phn_str, wav, spkr,dlct)]
                                 else: 
                                     self.sonant_dataset[phn_str].append(Sonant(phn_str, wav, spkr,dlct))
+                                '''
                         else:
                             # add it to purgatory
                             file_matcher[basename] = 1
@@ -101,7 +103,6 @@ class Timit():
         # data, samplerate = sf.read('existing_file.wav')
         exception = ''
         try:
-            #call(['sph2pipe', '-f', 'wav', wav_file, path+'/temp.WAV'])
             call(['sph2pipe', '-f', 'wav', wav_file, path+'/temp.WAV'], stdout=DEVNULL,stderr=DEVNULL)
 
             rate, data = scipy.io.wavfile.read(path + '/temp.WAV')
@@ -119,44 +120,37 @@ class Timit():
         return pairs,exception
 
     def read_db(self, yType, yVals):
-        #TODO: start by initializing big matrix and indexing into it
+
+        # initializing np arrays as zeros bc insertion is faster than appending
         y = np.zeros(15000, int)
-        #y = np.zeros(1, int)
-        #x = np.zeros((1,self.xLen),int)
         x = np.zeros((15000,self.xLen),int)
 
-        first = True
-        # returns ['sh',..] or ['DR1',...] or ['FCAO1',...]
+        # returns ['sh',..] or ['DR1',...] or ['FCAO1',...] depending on input
+        # this should also check that the second parameter is matched right?
+        # so 'PHN' and 'sh'
         yValList = self.ytype_val_list(yType)
 
-        # converting yVals array to corresponding numbers
+        # converting yValList array to corresponding numbers
         yNumVals = [ yValList.index(i) for i in yVals] 
+        
+        # counter used for insertion into y and x np arrays 
         count = 0
 
-        # TODO: might need to get parallel
-        # this is only taking the sonants that have the yVal of 'sh' so the
-        # conditional below is redundant - TODO: try getting rid of the second
-        # or removing map of {phn: Sonant}
-        for sonant in self.sonant_dataset[yValList[1]]:
+        for sonant in self.sonant_dataset:
+           
+            # loading graphic 
             #print('percent done: ' + str((count/3032)*100))
-            # returns 'sh' or 'DR1' or 'FCAO1'
+
+            # checks if value is desired given parameters 
             sonantYVal = self.ytype_value(yType,sonant)
             if yValList.index(sonantYVal) in yNumVals:
                 y[count] = yValList.index(sonantYVal)
                 x[count] = self.cut_pad(sonant.wav) 
-                '''if first:
-                    y[0] = yValList.index(sonantYVal)
-                    x[0] = self.cut_pad(sonant.wav)
-                    first = False
-                else:
-                    y = np.append(y,yValList.index(sonantYVal))
-                    print(sonant.phn)
-                    print(str(len(sonant.wav)))
-                    print(str(len(self.cut_pad(sonant.wav))))
-                    x = np.append(x,[self.cut_pad(sonant.wav)],axis=0)
-                '''
-            count = count + 1
+                count = count + 1
 
+        #TODO: cut off the extra part (first one that is all 0s)
+        y = y[0:count]
+        x = x[0:count]
         return y,x
 
     def cut_pad(self, wav):
@@ -186,7 +180,6 @@ class Timit():
 
 if __name__ == '__main__':
     timit = Timit('/Users/roycebranning/Desktop/Spring18_School/Speech_Research/TIMIT')
-    #print(timit.sonant_dataset)
     #print('total len (should be same and count number: ' + str(len))
     y,x = timit.read_db('PHN',['sh','h#'])
     print('x:' + str(x))
