@@ -119,16 +119,21 @@ class Timit():
         # double check that pairs is on stack and gets recreated on call
         return pairs,exception
 
-    def read_db(self, yType, yVals):
+    def read_db(self, yType, yVals=[]):
 
         # initializing np arrays as zeros bc insertion is faster than appending
-        y = np.zeros(150000, int)
-        x = np.zeros((150000,self.xLen),int)
+        y = np.zeros(1000000, int)
+        x = np.zeros((1000000,self.xLen),int)
 
         # returns ['sh',..] or ['DR1',...] or ['FCAO1',...] depending on input
         # this should also check that the second parameter is matched right?
         # so 'PHN' and 'sh'
+       
         yValList = self.ytype_val_list(yType)
+        
+        if len(yVals) == 0:
+            yVals = yValList
+ 
 
         # converting yValList array to corresponding numbers
         yNumVals = [ yValList.index(i) for i in yVals] 
@@ -151,6 +156,7 @@ class Timit():
         #TODO: cut off the extra part (first one that is all 0s)
         y = y[0:count]
         x = x[0:count]
+        
         return y,x
 
     def cut_pad(self, wav):
