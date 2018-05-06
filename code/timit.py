@@ -13,11 +13,12 @@ import sys
 
 class Sonant():
 
-    def __init__(self,phn,wav,speaker,dialect):
+    def __init__(self,phn,wav,speaker,dialect, dataset):
         self.phn = phn
         self.wav = wav
         self.spkr = speaker
         self.dlct = dialect
+        self.dataset = dataset
 
 class Timit():
     """ Timit class loads the Timit database into memory 
@@ -27,13 +28,14 @@ class Timit():
     :param dbPath: str, path to TIMIT database.
     """
 
-    def __init__(self, dbPath, xLen = 10000):
+    def __init__(self, dbPath, setPath, xLen = 10000):
         self.sonant_dataset = []
         self.xLen = xLen
         self.phnList = []
         self.dlctList = []
         self.spkrList = []
-        self.timit = self.load_db(dbPath) 
+        self.timit = self.load_db(dbPath)
+        self.coreTestSet = self.load_set(setPath)
 
     def load_db(self,dbPath):
         trainPath = dbPath + '/TRAIN'
@@ -57,27 +59,27 @@ class Timit():
                             # parse speaker and dialect info
                             subdir_arr = subdir.split('/')
                             spkr = subdir_arr[-1]
+                            # TODO: think through if this check is needed
                             if spkr not in self.spkrList:
                                 self.spkrList.append(spkr)
                             dlct = subdir_arr[-2]
                             if dlct not in self.dlctList:
                                 self.dlctList.append(dlct)
+                            dataset = subdir_arr[-3] 
                     
                             # parse wav and phn files
                             basepath = os.path.join(subdir,basename)
                             sonantPairs, err = self.sonant_tuples(basepath+'.phn',basepath+'.wav',subdir)
                             if len(err) != 0:
                                 exceptions.append(err)
-                            if len(sonantPairs) == 0:
-                                # there was an exception in sonant_tuples
-                                pass
+                            
                             for pair in sonantPairs:
                                 phn_str = pair[0]
                                 if phn_str not in self.phnList:
                                    self.phnList.append(phn_str) 
                                 wav = pair[1]
                                 test_count = test_count + 1
-                                self.sonant_dataset.append(Sonant(phn_str,wav,spkr,dlct))
+                                self.sonant_dataset.append(Sonant(phn_str,wav,spkr,dlct, dataset))
                         else:
                             # add it to purgatory
                             file_matcher[basename] = 1
@@ -87,6 +89,17 @@ class Timit():
             for ex in exceptions:
                 print(ex)
         print('')
+
+    def load_set(self,setPath):
+        set_dict = {}
+        with open(setPath,'r') as setFile:
+            for row in setFile:
+                spkrs = row.strip('\n').split(',')
+                key = 'DR' + str(spkrs[0])
+                set_dict[key] = [ 'M' + spkrs[1],
+                                    'M' + spkrs[2], 'F' + spkrs[3].rstrip() ]
+
+        return set_dict 
 
     def sonant_tuples(self, phn_file, wav_file, path):
         ''' returns a list of sonant text/waveform pairs based on the input files
@@ -114,33 +127,37 @@ class Timit():
         # double check that pairs is on stack and gets recreated on call
         return pairs,exception
 
-    def read_db(self, yType, yVals=[]):
+    def read_db(self, yType, yVals, dataset):
 
         # TODO: allow for segmentation with regard to database types:
         # - test, train, etc.
 
         # TODO: write documentation about format of read_db method:
-        # read_db('phn') <-- no 2nd parameter implies All
+        # read_db('phn','All')
         # read_db('phn',['sh']) <-- otherwise spec options in list of str
+        # read_db('phn',['sh'],'test')
 
 
         # initializing np arrays as zeros bc insertion is faster than appending
-        y = np.zeros(1000000, int)
-        x = np.zeros((1000000,self.xLen),int)
+        y = np.zeros(300000, int)
+        x = np.zeros((300000,self.xLen),int)
 
         # returns ['sh',..] or ['DR1',...] or ['FCAO1',...] depending on input
         # this should also check that the second parameter is matched right?
         # so 'PHN' and 'sh'
        
         yValList = self.ytype_val_list(yType)
-        
-        if len(yVals) == 0:
-            yVals = yValList
- 
+       
+        # check the 2nd input for assigning yVals 
+        if type(yVals) == str and yVals.lower() == 'all':
+            yVals = yValList 
 
         # converting yValList array to corresponding numbers
         yNumVals = [ yValList.index(i) for i in yVals] 
-        
+       
+        # converting the 3rd parameter to segment data appropriately
+        #dataset_type = get_dataset_type(dataset) #should return 1,2,3 
+         
         # counter used for insertion into y and x np arrays 
         count = 0
 
@@ -148,6 +165,10 @@ class Timit():
            
             # TODO: loading graphic 
             #print('percent done: ' + str((count/3032)*100))
+
+            # check
+            if not self.in_dataset(sonant, dataset):
+                continue 
 
             # checks if value is desired given parameters 
             sonantYVal = self.ytype_value(yType,sonant)
@@ -162,6 +183,15 @@ class Timit():
         
         return y,x
 
+    def in_dataset(self, sonant, dataset):
+        if dataset.lower() == 'coretest':
+            if sonant.spkr in self.coreTestSet[sonant.dlct]:
+                return True
+        elif dataset.lower() == sonant.dataset.lower():
+            return True
+
+        return False
+
     def cut_pad(self, wav):
         if len(wav) < self.xLen:
             return np.append(wav, np.zeros(self.xLen - len(wav), int))
@@ -170,7 +200,6 @@ class Timit():
         else:
             return wav
 
-    # TODO: these are bad come back and condense
     def ytype_value(self, yType, sonant):
         if yType == 'PHN':
             return sonant.phn
