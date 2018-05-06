@@ -41,7 +41,6 @@ class Timit():
         trainPath = dbPath + '/TRAIN'
         testPath = dbPath + '/TEST'
         sys.stdout.write('loading')       
-        #TODO: test-core dataset
         test_count = 0
         exceptions = list() 
         for path in [trainPath, testPath]:
@@ -104,11 +103,6 @@ class Timit():
     def sonant_tuples(self, phn_file, wav_file, path):
         ''' returns a list of sonant text/waveform pairs based on the input files
         '''
-        # TODO: instead of calling a subprocess might look into sphfile library here:
-        # https://pypi.python.org/pypi/sphfile/1.0.0
-        # TODO: other alternative:
-        # import soundfile as sf
-        # data, samplerate = sf.read('existing_file.wav')
         exception = ''
         try:
             call(['sph2pipe', '-f', 'wav', wav_file, path+'/temp.WAV'], stdout=DEVNULL,stderr=DEVNULL)
@@ -127,16 +121,7 @@ class Timit():
         # double check that pairs is on stack and gets recreated on call
         return pairs,exception
 
-    def read_db(self, yType, yVals, dataset):
-
-        # TODO: allow for segmentation with regard to database types:
-        # - test, train, etc.
-
-        # TODO: write documentation about format of read_db method:
-        # read_db('phn','All')
-        # read_db('phn',['sh']) <-- otherwise spec options in list of str
-        # read_db('phn',['sh'],'test')
-
+    def read_db(self, yType='PHN', yVals='All', dataset='test'):
 
         # initializing np arrays as zeros bc insertion is faster than appending
         y = np.zeros(300000, int)
@@ -166,7 +151,6 @@ class Timit():
             # TODO: loading graphic 
             #print('percent done: ' + str((count/3032)*100))
 
-            # check
             if not self.in_dataset(sonant, dataset):
                 continue 
 
@@ -204,9 +188,9 @@ class Timit():
         if yType == 'PHN':
             return sonant.phn
         elif yType == 'DLCT':
-            return sonant.dialect
+            return sonant.dlct
         elif yType == 'SPKR':
-            return sonant.speaker
+            return sonant.spkr
 
     def ytype_val_list(self, yType):
         if yType == 'PHN':
