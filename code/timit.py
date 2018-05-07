@@ -40,14 +40,17 @@ class Timit():
     def load_db(self,dbPath):
         trainPath = dbPath + '/TRAIN'
         testPath = dbPath + '/TEST'
-        sys.stdout.write('loading')       
         test_count = 0
-        exceptions = list() 
+        exceptions = list()
+        perc = 0 
         for path in [trainPath, testPath]:
             for subdir, dirs, files in os.walk(path):
-                # Loading visual 
-                sys.stdout.write('.')
+
+                # Loading visual
+                sys.stdout.write('loading: ' + str(int((perc/647)*100)) + '%') 
+                sys.stdout.write('\r')
                 sys.stdout.flush()
+                perc = perc + 1
                
                 # Add Sonants to sonant_dataset 
                 file_matcher = {}
@@ -58,7 +61,6 @@ class Timit():
                             # parse speaker and dialect info
                             subdir_arr = subdir.split('/')
                             spkr = subdir_arr[-1]
-                            # TODO: think through if this check is needed
                             if spkr not in self.spkrList:
                                 self.spkrList.append(spkr)
                             dlct = subdir_arr[-2]
@@ -82,8 +84,9 @@ class Timit():
                         else:
                             # add it to purgatory
                             file_matcher[basename] = 1
+        
         if len(exceptions) > 0:
-            print('')
+            print('\n')
             print('error parsing file(s):')
             for ex in exceptions:
                 print(ex)
@@ -140,17 +143,11 @@ class Timit():
         # converting yValList array to corresponding numbers
         yNumVals = [ yValList.index(i) for i in yVals] 
        
-        # converting the 3rd parameter to segment data appropriately
-        #dataset_type = get_dataset_type(dataset) #should return 1,2,3 
-         
         # counter used for insertion into y and x np arrays 
         count = 0
 
         for sonant in self.sonant_dataset:
            
-            # TODO: loading graphic 
-            #print('percent done: ' + str((count/3032)*100))
-
             if not self.in_dataset(sonant, dataset):
                 continue 
 
