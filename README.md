@@ -13,6 +13,7 @@ pip install speechdb
 
 ```python3
 from speechdb import timit
+# core_test_csv can be found in the testing_sets directory
 timit1 = timit.Timit(path_to_timit_database,path_to_core_test_csv)
 
 # yType: {'PHN','DLCT','SPKR'} (default='PHN')
